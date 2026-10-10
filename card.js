@@ -301,11 +301,18 @@ function entryPlanHtml(plan, fallbackStopPrice = null) {
     if (m) return { big: m[1], sub: m[2] };
     return { big: "", sub: t };
   };
+  const isNow = mode => mode === plan.recommended_mode;
+  const nowItem = plan[plan.recommended_mode] || {};
+  const nowAction = {
+    support: `지지 가격대 ${escHtml(nowItem.entry || "")} 근처에서 종가가 회복되는지 확인한 뒤 진입`,
+    breakout: `저항대 돌파와 거래량 증가를 확인한 뒤 진입 (${escHtml(nowItem.entry || "")})`,
+    wait: "지지·돌파 신호가 나올 때까지 신규 진입을 보류",
+  }[plan.recommended_mode];
   const methods = ["support", "breakout", "wait"].map(mode => {
     const item = plan[mode] || {};
     const pr = splitPrice(item.entry || "진입 보류");
-    return `<div class="entry-method" title="${summaries[mode]}">
-      <div class="entry-method-title">${labels[mode]}</div>
+    return `<div class="entry-method${isNow(mode) ? " recommended now" : ""}" title="${summaries[mode]}">
+      ${isNow(mode) ? '<span class="entry-now-badge">지금 해당</span>' : ""}<div class="entry-method-title">${labels[mode]}</div>
       <div class="entry-method-price mono">${pr.big || `<span class="entry-method-text">${pr.sub}</span>`}</div>
       ${pr.big && pr.sub ? `<div class="entry-method-sub mono">${pr.sub}</div>` : ""}
       <div class="entry-method-meta">${mode === "wait" ? `<b>전략 손절가</b> 없음 (진입 전)` : item.invalid ? `<b>전략 손절가</b> ${item.invalid}` : "조건 확인 필요"}${item.secondary ? `<br><b>다음</b> ${item.secondary}` : ""}</div>
@@ -314,6 +321,7 @@ function entryPlanHtml(plan, fallbackStopPrice = null) {
   return `<div class="entry-plan">
     <div class="entry-plan-head"><span>진입 계획</span><strong>참고용</strong></div>
     ${statusText ? `<div class="entry-plan-reason">${statusText}</div>` : ""}
+    ${nowAction ? `<div class="entry-plan-now"><b>지금 할 일</b> ${nowAction}<small>현재 위치에서 가장 가까운 방식이며, 수익을 보장하지 않습니다.</small></div>` : ""}
     <div class="entry-plan-stop"><span>운영 손절 기준</span><b class="mono">${stopPrice != null ? fmtWon(stopPrice) : "없음"}</b><small>${stopBasis}</small></div>
     <div class="entry-methods">${methods}</div>
     <div class="entry-plan-note">거래량 매물대로 계산한 참고 가격대입니다. 각 전략의 손절가는 해당 전략 기준의 참고 값이고, 과거 검증을 거친 손절은 위의 '운영 손절 기준'입니다. 과거 검증(2020~2026, 신호 1,331건)에서 세 방식 모두 즉시매수보다 나은 결과가 확인되지 않아 추천으로 표시하지 않습니다.</div>
