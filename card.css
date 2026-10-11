@@ -173,3 +173,26 @@
   #pastWrap .past-table .buffer{ display:inline-block; font-size:10px; line-height:1.35; white-space:normal; }
   #pastWrap .table-wrap{ overflow-x:hidden; }
 }
+
+/* 안전망: 개별 규칙이 없는 표도 모바일에서는 줄바꿈으로 폭을 맞춘다(개별 규칙이 더 구체적이라 우선한다) */
+@media (max-width:640px){
+  .table-wrap table{ width:100%; }
+  .table-wrap th, .table-wrap td{ white-space:normal; padding-left:5px; padding-right:5px; overflow-wrap:anywhere; }
+  .table-wrap th:first-child, .table-wrap td:first-child{ padding-left:9px; }
+  .table-wrap th:last-child, .table-wrap td:last-child{ padding-right:8px; }
+}
+/* 테마별 흐름 / 실행 상태: 모바일에서 좌우 스크롤 없이 */
+@media (max-width:640px){
+  #themeOverview .theme-table, #runStatusWrap .run-table{ width:100%; table-layout:fixed; }
+  #themeOverview .theme-table th, #themeOverview .theme-table td, #runStatusWrap .run-table th, #runStatusWrap .run-table td{ padding:9px 3px; font-size:10.5px; white-space:normal; }
+  #themeOverview .theme-table th:first-child, #themeOverview .theme-table td:first-child, #runStatusWrap .run-table th:first-child, #runStatusWrap .run-table td:first-child{ padding-left:9px; }
+  #themeOverview .theme-table th:last-child, #themeOverview .theme-table td:last-child, #runStatusWrap .run-table th:last-child, #runStatusWrap .run-table td:last-child{ padding-right:8px; }
+  #themeOverview .theme-table td:first-child{ font-size:12px; word-break:keep-all; overflow-wrap:anywhere; text-align:left; }
+  #themeOverview .theme-table th:nth-child(1){ width:34%; } #themeOverview .theme-table th:nth-child(2){ width:22%; }
+  #themeOverview .theme-table th:nth-child(3){ width:27%; } #themeOverview .theme-table th:nth-child(4){ width:17%; }
+  #runStatusWrap .run-table th:nth-child(1){ width:21%; } #runStatusWrap .run-table th:nth-child(2){ width:16%; }
+  #runStatusWrap .run-table th:nth-child(3){ width:11%; } #runStatusWrap .run-table th:nth-child(4){ width:52%; }
+  #runStatusWrap .run-table th, #runStatusWrap .run-table td{ text-align:left; }
+  #runStatusWrap .run-table td:nth-child(4){ text-align:left; line-height:1.4; word-break:keep-all; overflow-wrap:anywhere; }
+  #themeOverview .table-wrap, #runStatusWrap .table-wrap{ overflow-x:hidden; }
+}
