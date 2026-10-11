@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="card.css?v=29">
+<link rel="stylesheet" href="card.css?v=33">
 <style>
   :root{
     --bg:#eef6f1; --surface:#ffffff; --surface-2:#dfeee7;
@@ -344,7 +344,7 @@ function pastRowHTML(sig, idx) {
   return `
     <tr class="row-clickable" data-idx="${idx}">
       <td>${escHtml(sig.name)}<br><span class="code mono">${escHtml(sig.ticker)}</span>${status ? `<br>${status}` : ""}</td>
-      <td class="mono">${sig.scan_date}</td>
+      <td class="mono">${shortDate(sig.scan_date)}</td>
       <td class="mono">${d.price != null ? fmtWon(d.price) : "-"}</td>
       <td class="mono">${d.latest_price != null ? fmtWon(d.latest_price) : "-"}</td>
       <td class="ret ${retClass} mono">${ret != null ? fmtPct(ret) : "-"}</td>
@@ -353,10 +353,13 @@ function pastRowHTML(sig, idx) {
   `;
 }
 
+// 2026-10-06 -> 26/10/06 (좁은 화면에서 폭을 줄이려는 표시용)
+const shortDate = s => /^\d{4}-\d{2}-\d{2}/.test(s || "") ? `${s.slice(2, 4)}/${s.slice(5, 7)}/${s.slice(8, 10)}` : (s || "");
+
 function pastTableHTML(rows) {
   return `
     <div class="table-wrap">
-      <table>
+      <table class="past-table">
         <thead><tr><th>종목</th><th>추천일</th><th>추천가</th><th>현재가</th><th>수익률</th></tr></thead>
         <tbody>${rows.map((sig, i) => pastRowHTML(sig, i)).join("")}</tbody>
       </table>

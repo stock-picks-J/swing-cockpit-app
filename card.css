@@ -143,6 +143,8 @@
   #holdingsWrap .holdings-table th:nth-child(5){ width:28%; }
   #holdingsWrap .holdings-table th:nth-child(6){ width:28%; }
   #holdingsWrap .holdings-table th, #holdingsWrap .holdings-table td{ padding:9px 6px; }
+  #holdingsWrap .holdings-table th:first-child, #holdingsWrap .holdings-table td:first-child{ padding-left:10px; }
+  #holdingsWrap .holdings-table th:last-child, #holdingsWrap .holdings-table td:last-child{ padding-right:10px; }
   #holdingsWrap .holdings-table td:first-child{ white-space:normal; word-break:keep-all; overflow-wrap:anywhere; }
   #holdingsWrap .hold-meta{ display:block; margin-top:2px; font-size:10.5px; color:var(--ink-faint); line-height:1.35; }
   #holdingsWrap .holdings-table td:nth-child(5), #holdingsWrap .holdings-table td:nth-child(6){ font-size:11.5px; }
@@ -158,3 +160,16 @@
 .entry-plan-now b{ color:var(--accent); margin-right:5px; }
 .entry-plan-now small{ display:block; margin-top:3px; font-size:10px; color:var(--ink-faint); }
 @media (max-width:340px){ .entry-method-price{ font-size:12.5px !important; } .entry-method-title{ font-size:10px; } }
+
+/* 지난 추천 성과: 모바일에서 좌우 스크롤 없이(표 폭을 화면에 맞추고 종목 칸은 줄바꿈 허용) */
+@media (max-width:640px){
+  #pastWrap .past-table{ width:100%; table-layout:fixed; }
+  #pastWrap .past-table th:nth-child(1){ width:29%; } #pastWrap .past-table th:nth-child(2){ width:16%; }
+  #pastWrap .past-table th:nth-child(3){ width:18%; } #pastWrap .past-table th:nth-child(4){ width:18%; } #pastWrap .past-table th:nth-child(5){ width:19%; }
+  #pastWrap .past-table th:first-child, #pastWrap .past-table td:first-child{ padding-left:9px; }
+  #pastWrap .past-table th:last-child, #pastWrap .past-table td:last-child{ padding-right:8px; }
+  #pastWrap .past-table th, #pastWrap .past-table td{ padding:9px 3px; font-size:10.5px; }
+  #pastWrap .past-table td:first-child{ white-space:normal; word-break:keep-all; overflow-wrap:anywhere; font-size:12px; }
+  #pastWrap .past-table .buffer{ display:inline-block; font-size:10px; line-height:1.35; white-space:normal; }
+  #pastWrap .table-wrap{ overflow-x:hidden; }
+}
