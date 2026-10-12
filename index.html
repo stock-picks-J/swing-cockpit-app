@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="card.css?v=37">
+<link rel="stylesheet" href="card.css?v=39">
 <style>
   :root{
     --bg:#eef6f1; --surface:#ffffff; --surface-2:#dfeee7;
@@ -322,6 +322,44 @@ const SEED_CAPITAL = 10000000;
 // ============================================================
 
 // 보유중/청산완료 같은 상태는 육지완 님 개인 계좌 정보라 공개 뷰어에는 절대 표시하지 않는다.
+// 오늘의 추천 / 고변동 후보: 한 줄 요약 표, 행을 누르면 전체 카드가 펼쳐진다(지난 추천 성과와 같은 방식)
+function todayRowHTML(sig, idx) {
+  const d = sig.details || {};
+  const chg = d.chg_pct;
+  const chgClass = chg == null ? "" : (chg >= 0 ? "up" : "down");
+  const tags = [];
+  const lv = (d.disclosure || {}).level;
+  if (lv === "danger") tags.push('<span class="mini-tag tag-danger">공시 위험</span>');
+  else if (lv === "caution") tags.push('<span class="mini-tag tag-warn">공시 주의</span>');
+  const vl = (d.volume_check || {}).label;
+  if (vl === "low") tags.push('<span class="mini-tag tag-warn">거래량 낮음</span>');
+  else if (vl === "spike") tags.push('<span class="mini-tag tag-warn">거래량 급증</span>');
+  const ep = d.entry_plan || {};
+  const modeKo = { support: "지지 확인", breakout: "돌파 확인", wait: "관망" }[ep.recommended_mode];
+  if (modeKo) tags.push(`<span class="mini-tag">${modeKo}</span>`);
+  return `
+    <tr class="row-clickable" data-idx="${idx}">
+      <td>${escHtml(sig.name)}<br><span class="code mono">${escHtml(sig.ticker)}</span>${tags.length ? `<div class="mini-tags">${tags.join("")}</div>` : ""}</td>
+      <td class="mono">${d.price != null ? fmtWon(d.price) : "-"}</td>
+      <td class="mono">${d.stop_price != null ? fmtWon(d.stop_price) : "-"}</td>
+      <td class="ret ${chgClass} mono">${chg != null ? fmtPct(chg) : "-"}</td>
+    </tr>
+    <tr class="detail-row" data-detail-for="${idx}" hidden><td colspan="4"><div class="detail-inner"></div></td></tr>
+  `;
+}
+
+function todayTableHTML(rows) {
+  return `
+    <div class="table-wrap">
+      <table class="today-table">
+        <thead><tr><th>종목</th><th>추천가</th><th>손절가</th><th>오늘</th></tr></thead>
+        <tbody>${rows.map((sig, i) => todayRowHTML(sig, i)).join("")}</tbody>
+      </table>
+    </div>
+    <div class="scandate" style="margin-top:6px">행을 탭하면 추천 이유, 재무, 진입 계획 등 전체 내용이 펼쳐집니다.</div>
+  `;
+}
+
 function pastRowHTML(sig, idx) {
   const d = sig.details || {};
   const ret = d.latest_return_pct;
@@ -375,7 +413,7 @@ function pastTableHTML(rows) {
   `;
 }
 
-function wireExpandableRows(container, rows) {
+function wireExpandableRows(container, rows, cardOpts = { showReason: false, expandFin: true }, decorate = null) {
   container.querySelectorAll("tr.row-clickable").forEach(tr => {
     tr.addEventListener("click", () => {
       const idx = tr.dataset.idx;
@@ -384,7 +422,9 @@ function wireExpandableRows(container, rows) {
       const open = !detailRow.hidden;
       if (open) { detailRow.hidden = true; tr.classList.remove("open"); return; }
       if (!inner.dataset.built) {
-        inner.appendChild(buildSignalCard(rows[idx], { showReason: false, expandFin: true }));
+        const card = buildSignalCard(rows[idx], cardOpts);
+        if (decorate) decorate(card, rows[idx]);
+        inner.appendChild(card);
         inner.dataset.built = "1";
       }
       detailRow.hidden = false;
@@ -447,8 +487,8 @@ async function loadPublic() {
     badgeEl.textContent = "0건";
   } else {
     badgeEl.textContent = latest.length + "건";
-    cardsEl.innerHTML = "";
-    latest.forEach(sig => cardsEl.appendChild(buildSignalCard(sig)));
+    cardsEl.innerHTML = todayTableHTML(latest);
+    wireExpandableRows(cardsEl, latest, { expandFin: true });
   }
 
   const hvSec = document.getElementById("hvSection");
@@ -456,17 +496,18 @@ async function loadPublic() {
   hvEl.innerHTML = "";
   hvSec.style.display = hvList.length ? "" : "none";
   document.getElementById("hvBadge").textContent = hvList.length + "건";
-  hvList.forEach(sig => {
-    const card = buildSignalCard(sig);
-    const st = (sig.details || {}).hv_stats;
-    if (st) {
-      const box = document.createElement("div");
-      box.className = "hv-odds";
-      box.innerHTML = `<b>과거 ${st.bucket} 변동성 구간 진입</b> (${st.n}건): 평균 ${st.avg_pct.toFixed(1)}% · 수익 마감 ${st.win_pct.toFixed(0)}% · +20% 이상 ${st.big_win_pct.toFixed(0)}% · -8% 이하 ${st.big_loss_pct.toFixed(0)}%`;
-      card.appendChild(box);
-    }
-    hvEl.appendChild(card);
-  });
+  if (hvList.length) {
+    hvEl.innerHTML = todayTableHTML(hvList);
+    wireExpandableRows(hvEl, hvList, { expandFin: true }, (card, sig) => {
+      const st = (sig.details || {}).hv_stats;
+      if (st) {
+        const box = document.createElement("div");
+        box.className = "hv-odds";
+        box.innerHTML = `<b>과거 ${st.bucket} 변동성 구간 진입</b> (${st.n}건): 평균 ${st.avg_pct.toFixed(1)}% · 수익 마감 ${st.win_pct.toFixed(0)}% · +20% 이상 ${st.big_win_pct.toFixed(0)}% · -8% 이하 ${st.big_loss_pct.toFixed(0)}%`;
+        card.appendChild(box);
+      }
+    });
+  }
 
   if (past.length > 0) {
     pastEl.innerHTML = pastTableHTML(past);
