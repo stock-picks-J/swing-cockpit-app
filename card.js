@@ -185,6 +185,7 @@ export function buildSignalCard(sig, opts = {}) {
     ${showReason && sig.reason ? `<div class="why">${sig.reason}</div>` : ""}
     ${d.caution ? `<div class="caution">${d.caution}</div>` : ""}
     ${disclosureHtml(d.disclosure)}
+    ${volumeCheckHtml(d.volume_check)}
     ${entryPlanHtml(d.entry_plan, d.stop_price)}
     ${finHtml}
     ${d.track_record ? `<div class="track">${d.track_record}</div>` : ""}
@@ -273,6 +274,17 @@ function disclosureHtml(x) {
     html += `<div class="disc disc-good"><b>참고 공시</b> (호재성 포함)<ul>${rows}</ul><div class="disc-sub">호재 공시는 이미 주가에 반영됐거나 과열 신호일 수 있어 매수 근거로 쓰지 않습니다.</div></div>`;
   }
   return html;
+}
+
+// 거래량 점검(참고 지표): 최근 3일 최대 거래량이 직전 20일 평균의 몇 배인지. 매매 판단에는 쓰지 않고 기록하며 검증 중이다.
+function volumeCheckHtml(vc) {
+  if (!vc || vc.vr3 == null) return "";
+  const names = { low: "낮음", normal: "정상", spike: "급증" };
+  const label = names[vc.label] || "-";
+  const cls = vc.label === "normal" ? "vol-normal" : "vol-flag";
+  return `<div class="vol-check ${cls}"><div class="vol-head"><span>거래량 점검</span><strong>${label}</strong></div>
+    <div class="vol-body">평소의 <b class="mono">${Number(vc.vr3).toFixed(1)}배</b> <small>(최근 3일 최대 거래량 / 직전 20일 평균)</small></div>
+    <div class="vol-note">참고용입니다. 과거 검증에서 평소 수준(1~4배)일 때 성과가 좋았지만 사후 선택일 수 있어 앞으로의 신호로 확인 중입니다.</div></div>`;
 }
 
 function entryPlanHtml(plan, fallbackStopPrice = null) {
