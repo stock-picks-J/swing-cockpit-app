@@ -1,0 +1,163 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --bg:#eef6f1; --surface:#ffffff; --surface-2:#dfeee7;
+    --border:#cfe4da; --ink:#16241d; --ink-muted:#5b6b62; --ink-faint:#93a89b;
+    --accent:#6c5ce8; --accent-ink:#ffffff; --accent-soft:#e6e1fb;
+    --up:#e6483d; --up-soft:#fbdcd9; --down:#2f6fed; --down-soft:#dbe6fc;
+    --warn:#e08e00; --warn-soft:#fbe8c6; --shadow: 0 1px 2px rgba(22,36,29,.06), 0 6px 20px -8px rgba(22,36,29,.14);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#11201a; --surface:#182720; --surface-2:#1e352b;
+      --border:#2c4a3c; --ink:#eaf3ee; --ink-muted:#a9c2b6; --ink-faint:#72897c;
+      --accent:#a78bfa; --accent-ink:#1b1533; --accent-soft:#2e2555;
+      --up:#ff6b60; --up-soft:#3d211d; --down:#5b93ff; --down-soft:#1c2c4a;
+      --warn:#ffb020; --warn-soft:#3a2a10; --shadow: 0 1px 2px rgba(0,0,0,.35), 0 10px 26px -10px rgba(0,0,0,.55);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#11201a; --surface:#182720; --surface-2:#1e352b;
+    --border:#2c4a3c; --ink:#eaf3ee; --ink-muted:#a9c2b6; --ink-faint:#72897c;
+    --accent:#a78bfa; --accent-ink:#1b1533; --accent-soft:#2e2555;
+    --up:#ff6b60; --up-soft:#3d211d; --down:#5b93ff; --down-soft:#1c2c4a;
+    --warn:#ffb020; --warn-soft:#3a2a10; --shadow: 0 1px 2px rgba(0,0,0,.35), 0 10px 26px -10px rgba(0,0,0,.55);
+  }
+  *{box-sizing:border-box}
+  [hidden]{ display:none !important; }
+  html{ overflow-x:hidden; width:100%; }
+  body{
+    background:var(--bg); color:var(--ink); margin:0;
+    font-family:"IBM Plex Sans KR","Noto Sans KR",system-ui,sans-serif;
+    padding-inline:16px; max-width:720px; margin-inline:auto;
+    overflow-x:hidden; width:100%;
+  }
+  .mono{ font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums; }
+  h1,h2{ text-wrap:balance; margin:0; }
+
+  header.top{
+    position:sticky; top:env(safe-area-inset-top, 0px);
+    background:var(--bg); padding-block:18px 10px; z-index:5;
+    border-bottom:1px solid var(--border);
+  }
+  .brand{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .brand h1{ font-size:19px; font-weight:700; letter-spacing:-.01em; }
+  .header-link{ font-size:11.5px; color:var(--ink-muted); background:none; border:1px solid var(--border);
+    border-radius:999px; padding:5px 12px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+  .header-link:hover{ background:var(--surface-2); }
+  .asof{ font-size:11px; color:var(--ink-faint); margin-top:6px; }
+  .sub{ font-size:12px; color:var(--ink-muted); margin-top:4px; }
+
+  #loginForm{ max-width:280px; margin-top:12px; }
+  #loginForm input{ width:100%; padding:9px 11px; margin-bottom:8px; border:1px solid var(--border); border-radius:8px;
+    background:var(--surface); color:var(--ink); font-family:inherit; font-size:13px; }
+  #loginForm button{ width:100%; padding:10px; border:none; border-radius:8px; background:var(--accent); color:var(--accent-ink);
+    font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; }
+  #loginForm button:disabled{ opacity:.6; cursor:default; }
+  #loginErr{ color:var(--up); font-size:11.5px; margin-top:6px; min-height:14px; }
+
+  .tabbar{ display:flex; gap:6px; margin-top:14px; }
+  .tab-btn{ flex:1; padding:9px; border-radius:10px; border:1px solid var(--border); background:var(--surface);
+    color:var(--ink-muted); font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer; }
+  .tab-btn.active{ background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+
+  .chip-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .theme-chip{ padding:8px 13px; border-radius:20px; border:1px solid var(--border); background:var(--surface);
+    color:var(--ink-muted); font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .theme-chip.active{ background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+  .theme-chip.chip-up{ color:var(--up); }
+  .theme-chip.chip-down{ color:var(--down); }
+  .theme-chip.active.chip-up, .theme-chip.active.chip-down{ color:var(--accent-ink); }
+  .theme-chip.add-slot{ border-style:dashed; }
+  .theme-editor{ margin-top:10px; padding:12px; border:1px dashed var(--border); border-radius:10px; background:var(--surface); }
+  .theme-editor input{ width:100%; box-sizing:border-box; margin-top:4px; margin-bottom:8px; padding:8px; border-radius:8px;
+    border:1px solid var(--border); background:var(--bg); color:var(--ink); font-family:inherit; font-size:13px; }
+  .theme-editor .label{ font-size:11.5px; color:var(--ink-faint); }
+  .theme-editor .btn-row{ display:flex; gap:8px; }
+  .theme-editor button{ padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--surface);
+    color:var(--ink); font-family:inherit; font-size:12.5px; font-weight:600; cursor:pointer; }
+  .theme-editor button.primary{ background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+  .stock-chip-list{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .stock-chip{ padding:7px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface);
+    cursor:pointer; font-size:12.5px; }
+  .stock-chip .rank{ color:var(--accent); font-weight:700; margin-right:4px; }
+
+  .summary{
+    margin-top:12px; display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
+    background:var(--border); border:1px solid var(--border); border-radius:12px; overflow:hidden;
+  }
+  .summary .cell{ background:var(--surface); padding:10px 12px; }
+  .summary .label{ font-size:11px; color:var(--ink-muted); margin-bottom:4px; }
+  .summary .value{ font-size:16px; font-weight:600; }
+  .summary .value.up{ color:var(--up); } .summary .value.down{ color:var(--down); }
+
+  section{ margin-top:22px; }
+  .section-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px; gap:8px; }
+  .section-head h2{ font-size:15px; font-weight:600; }
+  .section-head .note{ font-size:11px; color:var(--ink-faint); }
+
+  .empty{ padding:22px 14px; text-align:center; color:var(--ink-faint); font-size:12.5px;
+    background:var(--surface); border:1px dashed var(--border); border-radius:12px; }
+
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  .table-wrap{ background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:auto; box-shadow:var(--shadow); }
+  th,td{ padding:9px 11px; text-align:right; white-space:nowrap; }
+  th:first-child,td:first-child{ text-align:left; }
+  thead th{ font-size:10.5px; color:var(--ink-muted); font-weight:500; border-bottom:1px solid var(--border); }
+  tbody tr+tr td{ border-top:1px solid var(--border); }
+  td.ret.up{ color:var(--up); font-weight:600; } td.ret.down{ color:var(--down); font-weight:600; }
+  td.pnl.up{ color:var(--up); font-weight:600; } td.pnl.down{ color:var(--down); font-weight:600; }
+
+  .chart-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px; box-shadow:var(--shadow); }
+  .chart-card svg{ display:block; width:100%; height:auto; overflow:visible; }
+
+  .search-box{ display:flex; gap:8px; }
+  .search-box input{ flex:1; padding:10px 12px; border:1px solid var(--border); border-radius:10px;
+    background:var(--surface); color:var(--ink); font-family:inherit; font-size:13px; }
+  .search-box button{ padding:10px 16px; border:none; border-radius:10px; background:var(--accent); color:var(--accent-ink);
+    font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
+
+  .universe-search{ width:100%; margin-top:10px; padding:10px 12px; border:1px solid var(--border); border-radius:10px;
+    background:var(--surface); color:var(--ink); font-family:inherit; font-size:13px; }
+
+  .pagination{ display:flex; align-items:center; justify-content:center; gap:4px; margin-top:12px; flex-wrap:wrap; }
+  .page-btn{ min-width:28px; height:28px; padding:0 6px; border-radius:7px; border:1px solid var(--border);
+    background:var(--surface); color:var(--ink-muted); font-family:inherit; font-size:12px; cursor:pointer; }
+  .page-btn.active{ background:var(--accent); color:var(--accent-ink); border-color:var(--accent); font-weight:600; }
+  .page-btn:disabled{ opacity:.35; cursor:default; }
+  .page-ellipsis{ color:var(--ink-faint); font-size:12px; padding:0 2px; }
+
+  footer{ margin:30px 0 24px; font-size:11px; color:var(--ink-faint); line-height:1.6; padding-block-end:env(safe-area-inset-bottom, 0px); }
+</style><link rel="stylesheet" href="card.css?v=36"></head><body><div class="wrap" style="padding:12px 16px">
+<h2>보유 종목</h2><div id="holdingsWrap"></div>
+<h2>지난 추천 성과</h2><div id="pastWrap"></div>
+<h2>테마별 흐름 및 추세</h2><div id="themeOverview"></div>
+<h2>실행 상태</h2><div id="runStatusWrap"></div>
+<h2>진입 계획 (종목 클릭 시)</h2><div id="planWrap"></div>
+<script type="module">
+import { fmtWon, fmtPct } from "./card.js?v=27";
+import * as C from "./card.js?v=27";
+const escHtml = t => String(t).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const shortDate = s => /^\d{4}-\d{2}-\d{2}/.test(s || "") ? `${s.slice(2, 4)}/${s.slice(5, 7)}/${s.slice(8, 10)}` : (s || "");
+// 보유 종목
+const H = [{name:"피에스케이홀딩스",t:"031980",q:6,e:163100,d:"09-17",cur:209500},{name:"KODEX 코리아배당성장",t:"211900",q:182,e:27873,d:"09-26",cur:26960},{name:"마이크로컨텍솔",t:"098120",q:26,e:51000,d:"09-17",cur:58500}];
+document.getElementById("holdingsWrap").innerHTML = `<div class="table-wrap"><table class="holdings-table"><thead><tr><th>종목</th><th>수량</th><th>진입가</th><th>진입일</th><th>현재 가치</th><th>수익</th></tr></thead><tbody>${H.map(p=>{const pnl=(p.cur-p.e)*p.q,pct=(p.cur/p.e-1)*100;return `<tr class="row-clickable"><td>${p.name}<br><span class="mono" style="font-size:10.5px;color:var(--ink-faint)">${p.t}</span><div class="hold-meta mono">${p.q}주 · 진입 ${fmtWon(p.e)} · ${p.d}</div></td><td>${p.q}</td><td>${fmtWon(p.e)}</td><td>${p.d}</td><td class="mono">${fmtWon(p.cur*p.q)}</td><td class="pnl ${pnl>=0?'up':'down'} mono">${fmtWon(pnl)}<span class="pnl-pct"> (${fmtPct(pct)})</span></td></tr>`}).join("")}</tbody></table></div>`;
+// 지난 추천 성과
+const R = [
+ {name:"한미사이언스", ticker:"008930", d:"2026-10-06", price:57500, last:53700, ret:-6.61, status:'<span class="buffer warn">손실 중 · 손절가까지 5.4% 여유 · 3일째</span>'},
+ {name:"피에스케이홀딩스", ticker:"031980", d:"2026-09-17", price:163100, last:209500, ret:28.45, status:'<span class="buffer">수익 중 · 최고 +31.2% · 15일째</span>'}];
+document.getElementById("pastWrap").innerHTML = `<div class="table-wrap"><table class="past-table"><thead><tr><th>종목</th><th>추천일</th><th>추천가</th><th>현재가</th><th>수익률</th></tr></thead><tbody>${R.map(r=>`<tr class="row-clickable"><td>${escHtml(r.name)}<br><span class="code mono">${r.ticker}</span><br>${r.status}</td><td class="mono">${shortDate(r.d)}</td><td class="mono">${fmtWon(r.price)}</td><td class="mono">${fmtWon(r.last)}</td><td class="ret ${r.ret>=0?'up':'down'} mono">${fmtPct(r.ret)}</td></tr>`).join("")}</tbody></table></div>`;
+// 테마
+const T = [{name:"2차전지/배터리 소재", r:12.34, e:8.21, n:23},{name:"반도체 장비", r:-3.2, e:-7.35, n:41},{name:"조선", r:25.9, e:21.76, n:12}];
+document.getElementById("themeOverview").innerHTML = `<div class="table-wrap"><table class="theme-table"><thead><tr><th>테마</th><th>20일 수익률</th><th>코스피 대비</th><th>구성종목수</th></tr></thead><tbody>${T.map(t=>`<tr><td>${escHtml(t.name)}</td><td class="ret ${t.r>=0?'up':'down'} mono">${fmtPct(t.r)}</td><td class="ret ${t.e>=0?'up':'down'} mono">${t.e>=0?'+':''}${t.e.toFixed(2)}%p</td><td class="mono">${t.n}</td></tr>`).join("")}</tbody></table></div>`;
+// 실행 상태(최근 2건만 + 접기 버튼)
+const RUN = [
+ {d:"2026-10-09", k:"저녁 배치", ok:"정상", t:'추천 0 / 고변동 0 · 원장 A 0.31% · B 0.00%<br><span style="color:var(--ink-faint)">한국 증시 휴장일(한글날) - 주문 없음</span>'},
+ {d:"2026-10-08", k:"아침 주문", ok:"정상", t:'매수 0 · 청산 0 · 건너뜀 1 · 실패 0<br><span style="color:var(--ink-faint)">계좌 대조: 한미사이언스 14주는 계좌에 없어 직접 매도로 정리</span>'},
+ {d:"2026-10-07", k:"저녁 배치", ok:"정상", t:'추천 3 / 고변동 1'},{d:"2026-10-07", k:"아침 주문", ok:"정상", t:'매수 3'}];
+const wrap = document.getElementById("runStatusWrap");
+wrap.innerHTML = `<div class="table-wrap"><table class="run-table"><thead><tr><th>날짜</th><th>종류</th><th>결과</th><th>내용</th></tr></thead><tbody>${RUN.map((r,i)=>`<tr${i>=2?' class="run-old" hidden':''}><td class="mono">${shortDate(r.d)}</td><td>${r.k}</td><td>${r.ok}</td><td style="text-align:left">${r.t}</td></tr>`).join("")}</tbody></table></div><button type="button" id="runMoreBtn" class="run-more">이전 기록 2건 보기 ▾</button>`;
+// 진입 계획
+const sig = {ticker:"051160", name:"지어소프트", scan_date:"2026-10-06", details:{price:14220, stop_price:12000, tier:"core", entry_plan:{recommended_mode:"support", support:{entry:"13,400~13,700원", invalid:"13,000원 이탈"}, breakout:{entry:"14,900원 상향 돌파", invalid:"14,200원 이탈"}, wait:{entry:"진입 보류"}}}};
+document.getElementById("planWrap").append(C.buildSignalCard(sig, {}));
+</script></div></body></html>
