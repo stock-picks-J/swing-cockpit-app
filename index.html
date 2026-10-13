@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="card.css?v=40">
+<link rel="stylesheet" href="card.css?v=41">
 <style>
   :root{
     --bg:#eef6f1; --surface:#ffffff; --surface-2:#dfeee7;
@@ -101,6 +101,9 @@
   }
   .summary .cell{ background:var(--surface); padding:10px 12px; }
   .summary .label{ font-size:11px; color:var(--ink-muted); margin-bottom:4px; }
+  .summary .label small{ font-size:10px; color:var(--ink-faint); }
+  .summary .cell.wide{ grid-column:1 / -1; }
+  .cash-sub{ margin-top:4px; font-size:10.5px; line-height:1.45; color:var(--ink-faint); }
   .summary .value{ font-size:16px; font-weight:600; }
   .summary .value.up{ color:var(--up); } .summary .value.down{ color:var(--down); }
 
@@ -251,6 +254,11 @@
     <div class="cell">
       <div class="label">보유 종목</div>
       <div class="value mono" id="sumCount">–</div>
+    </div>
+    <div class="cell wide">
+      <div class="label">현금 <small>(실제 쓸 수 있는 금액, 결제 후)</small></div>
+      <div class="value mono" id="sumCash">–</div>
+      <div class="cash-sub" id="sumCashSub">다음 자동 실행 후 표시됩니다.</div>
     </div>
   </div>
 
@@ -1217,6 +1225,22 @@ async function loadRunStatus() {
   }
 }
 
+// 현금: 실행 기록(pipeline_runs)에 저장된 가장 최근 계좌 요약을 보여 준다(아침 주문 직후, 저녁 배치 후 갱신).
+async function loadCash() {
+  const valEl = document.getElementById("sumCash"), subEl = document.getElementById("sumCashSub");
+  try {
+    const { data, error } = await supabase.from("pipeline_runs").select("run_date,kind,summary,created_at").order("created_at", { ascending: false }).limit(20);
+    if (error) return;
+    const hit = (data || []).find(r => r.summary && r.summary.account && r.summary.account.cash != null);
+    if (!hit) return;
+    const a = hit.summary.account;
+    valEl.textContent = fmtWon(a.cash);
+    const when = a.as_of ? `${a.as_of.slice(5, 10).replace("-", "/")} ${a.as_of.slice(11, 16)} 기준` : `${hit.run_date} 기준`;
+    const dep = a.deposit != null && Math.abs(a.deposit - a.cash) > 1 ? ` · 증권사 예수금 ${fmtWon(a.deposit)}(최근 매수 대금 결제 전 값)` : "";
+    subEl.textContent = `${when}${dep}`;
+  } catch (e) { /* 표시만 생략 */ }
+}
+
 async function bootOwner() {
   document.getElementById("tabbar").hidden = false;
   document.getElementById("ownerLoginToggle").hidden = true;
@@ -1225,6 +1249,7 @@ async function bootOwner() {
   switchTab("owner");
   setupPush();
   loadRunStatus();
+  loadCash();
 
   const [{ data: positions, error: posErr }, { data: trades, error: tradeErr }, { data: snaps, error: snapErr }, { data: earliestSignal }, { data: kospiRows }, alertRes] = await Promise.all([
     supabase.from("positions").select("*").eq("status", "open").order("entry_date", { ascending: false }),
