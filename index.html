@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="card.css?v=39">
+<link rel="stylesheet" href="card.css?v=40">
 <style>
   :root{
     --bg:#eef6f1; --surface:#ffffff; --surface-2:#dfeee7;
@@ -1182,7 +1182,7 @@ async function loadRunStatus() {
     if (eLast) {
       chips.push(`저녁 배치 ${eLast.run_date}: ${eLast.ok ? "정상" : "문제 있음"}`);
       if (!eLast.ok) bump("danger");
-      if (weekday && minutes >= 17 * 60 + 40 && eLast.run_date !== todayStr) { chips.push("저녁 배치: 오늘 기록 없음"); bump("warn"); }
+      if (weekday && minutes >= 19 * 60 + 45 && eLast.run_date !== todayStr) { chips.push("저녁 배치: 오늘 기록 없음"); bump("warn"); }
     } else {
       chips.push("저녁 배치: 기록 없음");
     }
