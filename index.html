@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="card.css?v=41">
+<link rel="stylesheet" href="card.css?v=42">
 <style>
   :root{
     --bg:#eef6f1; --surface:#ffffff; --surface-2:#dfeee7;
@@ -259,6 +259,7 @@
       <div class="label">현금 <small>(실제 쓸 수 있는 금액, 결제 후)</small></div>
       <div class="value mono" id="sumCash">–</div>
       <div class="cash-sub" id="sumCashSub">다음 자동 실행 후 표시됩니다.</div>
+      <div class="cash-sub" id="sumStockSub"></div>
     </div>
   </div>
 
@@ -1238,6 +1239,12 @@ async function loadCash() {
     const when = a.as_of ? `${a.as_of.slice(5, 10).replace("-", "/")} ${a.as_of.slice(11, 16)} 기준` : `${hit.run_date} 기준`;
     const dep = a.deposit != null && Math.abs(a.deposit - a.cash) > 1 ? ` · 증권사 예수금 ${fmtWon(a.deposit)}(최근 매수 대금 결제 전 값)` : "";
     subEl.textContent = `${when}${dep}`;
+    // 주식 평가금액(공식 종가 기준): 저녁 배치 기록에 있다. 증권사 화면의 "총 자산"(주식 평가금액)과 같은 항목이라 비교하기 쉽다.
+    const ev = (data || []).find(r => r.summary && r.summary.account && r.summary.account.stock_value != null);
+    if (ev) {
+      const d = ev.run_date ? ev.run_date.slice(5).replace("-", "/") : "";
+      document.getElementById("sumStockSub").textContent = `주식 평가금액 ${fmtWon(ev.summary.account.stock_value)} (${d} 공식 종가 기준 · 증권사 화면의 "총 자산"과 같은 항목)`;
+    }
   } catch (e) { /* 표시만 생략 */ }
 }
 
