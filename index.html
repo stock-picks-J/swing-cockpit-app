@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="card.css?v=42">
+<link rel="stylesheet" href="card.css?v=43">
 <style>
   :root{
     --bg:#eef6f1; --surface:#ffffff; --surface-2:#dfeee7;
@@ -1239,11 +1239,13 @@ async function loadCash() {
     const when = a.as_of ? `${a.as_of.slice(5, 10).replace("-", "/")} ${a.as_of.slice(11, 16)} 기준` : `${hit.run_date} 기준`;
     const dep = a.deposit != null && Math.abs(a.deposit - a.cash) > 1 ? ` · 증권사 예수금 ${fmtWon(a.deposit)}(최근 매수 대금 결제 전 값)` : "";
     subEl.textContent = `${when}${dep}`;
-    // 주식 평가금액(공식 종가 기준): 저녁 배치 기록에 있다. 증권사 화면의 "총 자산"(주식 평가금액)과 같은 항목이라 비교하기 쉽다.
+    // 주식 평가금액과 평가손익(미실현): 증권사 화면의 "총 자산"(주식 평가금액), "평가손익"과 같은 항목이다. 증권사와 같은 가격(통합 시세 마지막 체결가)으로 계산한다.
     const ev = (data || []).find(r => r.summary && r.summary.account && r.summary.account.stock_value != null);
     if (ev) {
+      const ac = ev.summary.account;
       const d = ev.run_date ? ev.run_date.slice(5).replace("-", "/") : "";
-      document.getElementById("sumStockSub").textContent = `주식 평가금액 ${fmtWon(ev.summary.account.stock_value)} (${d} 공식 종가 기준 · 증권사 화면의 "총 자산"과 같은 항목)`;
+      const upnl = ac.unrealized != null ? ` · 평가손익(미실현) ${fmtWon(ac.unrealized)}` : "";
+      document.getElementById("sumStockSub").textContent = `주식 평가금액 ${fmtWon(ac.stock_value)}${upnl} (${d} 마지막 체결가 기준 · 증권사 화면의 "총 자산", "평가손익"과 같은 항목)`;
     }
   } catch (e) { /* 표시만 생략 */ }
 }
@@ -1298,14 +1300,18 @@ async function bootOwner() {
     // 배당ETF(211900 등)처럼 유니버스에 없는 종목은 dividend_regime_status.dividend_prices로 보완
     // (2026-09-30: 배당ETF만 수익률이 안 나오던 문제 — 유니버스에 애초에 없는 종목이라 발생)
     const holdingTickers = positions.map(p => p.ticker);
-    const [{ data: priceRows }, { data: divRows }] = await Promise.all([
+    const [{ data: priceRows }, { data: divRows }, { data: acctRows }] = await Promise.all([
       supabase.from("universe").select("code,details").in("code", holdingTickers),
       supabase.from("dividend_regime_status").select("dividend_prices").eq("id", 1),
+      supabase.from("pipeline_runs").select("summary,created_at").order("created_at", { ascending: false }).limit(20),
     ]);
+    // 가장 최근 계좌 요약의 종목별 평가 가격(증권사 화면과 같은 통합 시세)이 있으면 그것을 우선 쓴다.
+    const acctPrices = ((acctRows || []).find(r => r.summary && r.summary.account && r.summary.account.prices) || {}).summary?.account?.prices || {};
     const priceByTicker = {};
     (priceRows || []).forEach(u => { if (u.details && u.details.price != null) priceByTicker[u.code] = u.details.price; });
     const divPrices = (divRows && divRows[0] && divRows[0].dividend_prices) || {};
     Object.entries(divPrices).forEach(([code, price]) => { if (priceByTicker[code] == null) priceByTicker[code] = price; });
+    Object.entries(acctPrices).forEach(([code, price]) => { if (holdingTickers.includes(code) && price > 0) priceByTicker[code] = price; });
 
     const rows = positions.map((p, i) => {
       const curPrice = priceByTicker[p.ticker];
