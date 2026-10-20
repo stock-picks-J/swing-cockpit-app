@@ -311,6 +311,14 @@
       <div class="chart-legend" id="chartLegend" style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink-faint);margin-top:6px"></div>
     </div>
   </section>
+
+  <section>
+    <div class="section-head">
+      <h2>가상 원장 - 스윙 B</h2>
+      <span class="note">전방 검증용, 실제 주문 없음</span>
+    </div>
+    <div id="swingBWrap"><div class="empty">불러오는 중…</div></div>
+  </section>
 </div>
 
 <footer>
@@ -407,7 +415,7 @@ const shortDate = s => /^\d{4}-\d{2}-\d{2}/.test(s || "") ? `${s.slice(2, 4)}/${
 const EXIT_REASON_KO = {
   stop: "손절", stop_loss: "손절", horizon: "기간 만료", take_profit: "익절", manual: "직접 매도", reconciled_manual: "직접 매도(자동 정리)",
   swing_partial_take_profit: "절반 익절", swing_trend_exit: "추세 정리", rest_trail_exit: "남은 물량 정리(하락)", rest_time_exit: "남은 물량 정리(기간)", max_hold: "최대 보유 정리",
-  etf_trail: "ETF 규칙 매도(고점 -20%)", manual_partial: "직접 일부 매도",
+  etf_trail: "ETF 규칙 매도(고점 -20%)", manual_partial: "직접 일부 매도", give_back: "수익 반납 청산", loser_20d: "20일 손실 정리",
 };
 const exitReasonKo = r => (r ? (EXIT_REASON_KO[r] || r) : "-");
 
@@ -1251,6 +1259,63 @@ async function loadCash() {
   } catch (e) { /* 표시만 생략 */ }
 }
 
+// 가상 원장(스윙 B): scripts/112 검증안을 KIS 주문 없이 전방 기록한 계정(strategy_key=swing_b). 주인 전용 테이블이라 로그인 후에만 읽힌다.
+async function loadSwingB() {
+  const wrap = document.getElementById("swingBWrap");
+  if (!wrap) return;
+  try {
+    const key = "swing_b";
+    const [accRes, snapRes, posRes, trRes] = await Promise.all([
+      supabase.from("paper_strategy_accounts").select("*").eq("strategy_key", key),
+      supabase.from("paper_strategy_snapshots").select("snap_date,equity,cash,invested,n_positions,return_pct").eq("strategy_key", key).order("snap_date", { ascending: true }).limit(400),
+      supabase.from("paper_strategy_positions").select("*").eq("strategy_key", key).eq("status", "open").order("entry_date", { ascending: false }),
+      supabase.from("paper_strategy_trades").select("*").eq("strategy_key", key).order("exit_date", { ascending: false }).limit(300),
+    ]);
+    if (accRes.error || !accRes.data || !accRes.data.length) {
+      wrap.innerHTML = `<div class="empty">스윙 B 계정이 아직 없습니다.</div>`;
+      return;
+    }
+    const acc = accRes.data[0], snaps = snapRes.data || [], pos = posRes.data || [], trs = trRes.data || [];
+    const initial = Number(acc.initial_capital), last = snaps.length ? snaps[snaps.length - 1] : null;
+    const equity = last ? Number(last.equity) : Number(acc.cash);
+    const ret = (equity / initial - 1) * 100;
+    const n = trs.length, wins = trs.filter(t => t.pnl_pct > 0).length;
+    const avg = n ? trs.reduce((a, t) => a + Number(t.pnl_pct), 0) / n : null;
+    let priceBy = {};
+    if (pos.length) {
+      const { data: pr } = await supabase.from("universe").select("code,details").in("code", pos.map(p => p.ticker));
+      (pr || []).forEach(u => { if (u.details && u.details.price != null) priceBy[u.code] = u.details.price; });
+    }
+    const pend = ((acc.params || {}).sb_pending || []);
+    const rows = pos.map(p => {
+      const cur = priceBy[p.ticker];
+      const pct = cur != null ? (cur / p.entry_price - 1) * 100 : null;
+      const flag = (p.metadata || {}).flag === "give_back" ? " · 수익 반납 청산 예정" : "";
+      return `<tr>
+        <td>${escHtml(p.name)} <span class="mono" style="font-size:10.5px;color:var(--ink-faint)">${escHtml(p.ticker)}</span><div class="mono" style="font-size:10.5px;color:var(--ink-faint)">${p.quantity}주 · 진입 ${fmtWon(p.entry_price)} · 손절 ${p.stop_loss_price != null ? fmtWon(p.stop_loss_price) : "-"}${flag}</div></td>
+        <td class="mono" style="white-space:nowrap">${escHtml(String(p.entry_date).slice(5))}</td>
+        <td class="pnl ${pct == null ? "" : pct >= 0 ? "up" : "down"} mono" style="white-space:nowrap">${pct != null ? fmtPct(pct) : "-"}</td>
+      </tr>`;
+    }).join("");
+    const trRows = trs.slice(0, 10).map(t => `<tr>
+        <td>${escHtml(t.name)}<br><span class="mono" style="font-size:10.5px;color:var(--ink-faint)">${escHtml(t.ticker)}</span></td>
+        <td class="mono">${escHtml(String(t.exit_date).slice(5))}</td>
+        <td class="mono">${escHtml(exitReasonKo(t.exit_reason))}</td>
+        <td class="pnl ${t.pnl_pct > 0 ? "up" : t.pnl_pct < 0 ? "down" : ""} mono">${fmtPct(Number(t.pnl_pct))}</td>
+      </tr>`).join("");
+    wrap.innerHTML = `<div class="summary">
+        <div class="cell"><div class="label">평가 금액</div><div class="value mono">${fmtWon(equity)}</div></div>
+        <div class="cell"><div class="label">수익률</div><div class="value mono ${ret >= 0 ? "up" : "down"}">${fmtPct(ret)}</div></div>
+        <div class="cell"><div class="label">보유 / 청산</div><div class="value mono">${pos.length} / ${n}건</div></div>
+      </div>
+      <div class="note" style="font-size:10.5px;color:var(--ink-faint);margin:6px 0">가상 자금 ${fmtWon(initial)}, 시작 ${escHtml(String(acc.started_on))}. 청산 ${n}/30건${n ? ` · 승률 ${(wins / n * 100).toFixed(0)}% · 평균 ${fmtPct(avg)}` : ""}. 판정은 3개월과 청산 30건 이상 쌓인 뒤.${pend.length ? ` 진입 예약: ${pend.map(e => escHtml(e.name)).join(", ")}` : ""}</div>
+      ${pos.length ? `<div class="table-wrap"><table class="holdings-table"><thead><tr><th>종목</th><th>진입일</th><th>수익</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty">보유 중인 가상 포지션이 없습니다.</div>`}
+      ${trs.length ? `<div class="note" style="font-size:10.5px;color:var(--ink-faint);margin:10px 0 4px">최근 청산 ${Math.min(10, trs.length)}건</div><div class="table-wrap"><table><thead><tr><th>종목</th><th>청산일</th><th>사유</th><th>손익률</th></tr></thead><tbody>${trRows}</tbody></table></div>` : ""}`;
+  } catch (e) {
+    wrap.innerHTML = `<div class="empty">불러오지 못했습니다.</div>`;
+  }
+}
+
 async function bootOwner() {
   document.getElementById("tabbar").hidden = false;
   document.getElementById("ownerLoginToggle").hidden = true;
@@ -1260,6 +1325,7 @@ async function bootOwner() {
   setupPush();
   loadRunStatus();
   loadCash();
+  loadSwingB();
 
   const [{ data: positions, error: posErr }, { data: trades, error: tradeErr }, { data: snaps, error: snapErr }, { data: earliestSignal }, { data: kospiRows }, alertRes] = await Promise.all([
     supabase.from("positions").select("*").eq("status", "open").order("entry_date", { ascending: false }),
