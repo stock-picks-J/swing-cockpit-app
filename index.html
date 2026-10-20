@@ -407,6 +407,7 @@ const shortDate = s => /^\d{4}-\d{2}-\d{2}/.test(s || "") ? `${s.slice(2, 4)}/${
 const EXIT_REASON_KO = {
   stop: "손절", stop_loss: "손절", horizon: "기간 만료", take_profit: "익절", manual: "직접 매도", reconciled_manual: "직접 매도(자동 정리)",
   swing_partial_take_profit: "절반 익절", swing_trend_exit: "추세 정리", rest_trail_exit: "남은 물량 정리(하락)", rest_time_exit: "남은 물량 정리(기간)", max_hold: "최대 보유 정리",
+  etf_trail: "ETF 규칙 매도(고점 -20%)", manual_partial: "직접 일부 매도",
 };
 const exitReasonKo = r => (r ? (EXIT_REASON_KO[r] || r) : "-");
 
